@@ -61,7 +61,8 @@ export const suits = ['Clubs', 'Diamonds', 'Hearts', 'Spades'];
 
 
 
-export function suits_num(num) { 
+export function suits_num(a) { 
+	const num = Number(a)
 	if (num < 14) {
 		return 'Spades'; //黑桃
 	} else if (num < 27) {

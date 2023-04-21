@@ -4,17 +4,16 @@ import './App.css'
 import init, { RecordCiphertext } from '@aleohq/wasm';
 import createjs from 'createjs-npm';
 import { Button } from './js/button';
-import { deckNumber, imgs, messages, rand,suits_num, suits } from './js/conf';
+import {  imgs, messages, rand,suits_num, suits } from './js/conf';
 import { TextInput } from './js/CreateJSTextInput';
 import { Card } from './js/card';
-import { decodeNum ,decode} from './test'
+import { decodeNum ,decode} from './js/util'
 // Initialize WASM
 await init("../node_modules/@aleohq/wasm/aleo_wasm_bg.wasm");
-
 import { AleoNetworkClient,Account } from "@aleohq/sdk";
-import BlackJack from './blackjack';
-import BlackJackHm from './blackjack_hm';
-import { mark } from 'regenerator-runtime';
+// import BlackJack from './blackjack';
+// import BlackJackHm from './blackjack_hm';
+
 function parsedNoNormalJsonString(str) {
   return JSON.parse(str.replace(/\.(public|private|u128|u64)/g,'').replace(/(\w+)\s*:/g, '"$1":').replace(/:\s*([\w\d]+)/g, ': "$1"'))
 }
@@ -62,211 +61,241 @@ function App() {
 		}
 		}
 
-	var game = {
-    deck: [],
-		chipsValue: {
-			blue: 500,
-			black: 100,
-			green: 25,
-			red: 5,
-			white: 1
-		},
-		startContainer: undefined,
-		buttons: [
-			new Button('Hit', '#fff', 100, 100, () => player.hit()),
-			new Button('Stand', '#fff', 200, 100, () => player.stand()),
-			new Button('Go', '#fff', 935, -430, () => game.go()),
-			//new Button('Insurance', '#fff', 100, -80, () => player.insure()),
-			//new Button('Split', '#fff', 100, -40, () => l('split')),
-			// new Button('Double', '#fff', 100, -40, () => player.double()),
-			//new Button('Give up', '#fff', 100, 0, () => player.giveUp()),
-			new Button('New game', '#fff', 100, -490, () => game.reset())
-		],
-		buttonContainer: undefined,
-		dealtChipContainer: undefined,
-		inProgress: false,
-		dealt: {
-			blue: 0,
-			black: 0,
-			green: 0,
-			red: 0,
-			white: 0
-		},
-		resetChips: function(){
-			Object.keys(this.dealt).forEach(color => this.dealt[color] = 0);
-		},
-		message: {
-			text: false,
-			init: function(){
-				this.text = new createjs.Text(messages.bet, '40px Arial', '#fff');
-				this.text.x = 850;
-				this.text.y = 0;
-				stage.addChild(this.text);
-			}
-		},
+	  var game = {
+		  deck: [],
+		  chipsValue: {
+			  blue: 500,
+			  black: 100,
+			  green: 25,
+			  red: 5,
+			  white: 1
+		  },
+		  startContainer: undefined,
+		  buttons: [
+			  new Button('Hit', '#fff', 100, 100, () => player.hit()),
+			  new Button('Stand', '#fff', 200, 100, () => player.stand()),
+			  new Button('Go', '#fff', 935, -430, () => game.go()),
+			  new Button('New game', '#fff', 100, -490, () => game.reset())
+		  ],
+		  buttonContainer: undefined,
+		  dealtChipContainer: undefined,
+		  inProgress: false,
+		  dealt: {
+			  blue: 0,
+			  black: 0,
+			  green: 0,
+			  red: 0,
+			  white: 0
+		  },
+		  resetChips: function () {
+			  Object.keys(this.dealt).forEach(color => this.dealt[color] = 0);
+		  },
+		  message: {
+			  text: false,
+			  init: function () {
+				  this.text = new createjs.Text(messages.bet, '40px Arial', '#fff');
+				  this.text.x = 850;
+				  this.text.y = 0;
+				  stage.addChild(this.text);
+			  }
+		  },
 
-		_alert: function(msg){
-			var alertText = new createjs.Text(msg.msg, '30px Arial', 'orange');
-			alertText.x = msg.x || 745;
-			alertText.y = 120;
-			stage.addChild(alertText);
-			createjs.Tween.get(alertText)
-				.wait(1000)
-				.to({alpha: 0}, 1000, createjs.Ease.getPowInOut(1));
-		},
+		  _alert: function (msg) {
+			  var alertText = new createjs.Text(msg.msg, '30px Arial', 'orange');
+			  alertText.x = msg.x || 745;
+			  alertText.y = 120;
+			  stage.addChild(alertText);
+			  createjs.Tween.get(alertText)
+				  .wait(1000)
+				  .to({ alpha: 0 }, 1000, createjs.Ease.getPowInOut(1));
+		  },
 
-		reset: function(){
-			['userName', 'chips', 'funds'].forEach(v => localStorage.removeItem('BlackJackJs-' + v));
-			location.reload();
-		},
+		  reset: function () {
+			  ['userName', 'chips', 'funds'].forEach(v => localStorage.removeItem('BlackJackJs-' + v));
+			  location.reload();
+		  },
 
-		over: function(){
-			['userName', 'chips', 'funds'].forEach(v => localStorage.removeItem('BlackJackJs-' + v));
-			stage.removeAllChildren();
-			var gameOverText = new createjs.Text('Game Over', '50px Arial', '#fff');
-			gameOverText.center(1, 1);
-			var replayText = new createjs.Text('Replay', '30px Arial', '#fff');
-			replayText.center(1);
-			replayText.y = 400;
-			var hit = new createjs.Shape();
-			hit.graphics.beginFill("#000").drawRect(0, 0, replayText.getMeasuredWidth(), replayText.getMeasuredHeight());
-			replayText.hitArea = hit;
-			replayText.alpha = 0.7;
-			replayText.cursor = 'Pointer';
-			replayText.on('mouseover', function(){
-                replayText.alpha = 1;
-			});
-			replayText.on('mouseout', () => replayText.alpha = 0.7);
-			replayText.addEventListener('click', () => location.reload());
-			stage.addChild(gameOverText, replayText);
-		},
+		  over: function () {
+			  ['userName', 'chips', 'funds'].forEach(v => localStorage.removeItem('BlackJackJs-' + v));
+			  stage.removeAllChildren();
+			  var gameOverText = new createjs.Text('Game Over', '50px Arial', '#fff');
+			  gameOverText.center(1, 1);
+			  var replayText = new createjs.Text('Replay', '30px Arial', '#fff');
+			  replayText.center(1);
+			  replayText.y = 400;
+			  var hit = new createjs.Shape();
+			  hit.graphics.beginFill("#000").drawRect(0, 0, replayText.getMeasuredWidth(), replayText.getMeasuredHeight());
+			  replayText.hitArea = hit;
+			  replayText.alpha = 0.7;
+			  replayText.cursor = 'Pointer';
+			  replayText.on('mouseover', function () {
+				  replayText.alpha = 1;
+			  });
+			  replayText.on('mouseout', () => replayText.alpha = 0.7);
+			  replayText.addEventListener('click', () => location.reload());
+			  stage.addChild(gameOverText, replayText);
+		  },
 
-		balanceChips: function(value){
-			var chips = {
-				blue: 0,
-				black: 0,
-				green: 0,
-				red: 0,
-				white: 0
-			};
+		  balanceChips: function (value) {
+			  var chips = {
+				  blue: 0,
+				  black: 0,
+				  green: 0,
+				  red: 0,
+				  white: 0
+			  };
 
-			while(value !== 0){
-				Object.keys(chips).reverse().forEach(function(chip){
-					if(value >= game.chipsValue[chip]){
-						value -= game.chipsValue[chip];
-						chips[chip]++;
-					}
-				});
-			}
+			  while (value !== 0) {
+				  Object.keys(chips).reverse().forEach(function (chip) {
+					  if (value >= game.chipsValue[chip]) {
+						  value -= game.chipsValue[chip];
+						  chips[chip]++;
+					  }
+				  });
+			  }
 
-			return chips;
-		},
+			  return chips;
+		  },
 
-		startScreen: function(){
-			stage.enableMouseOver(10);
-			createjs.Ticker.addEventListener('tick', tick);
-			createjs.Ticker.setFPS(60);
-			createjs.Sound.registerSound('src/assets/sounds/sfx_lose.ogg', 'lose');
-			createjs.Sound.registerSound('src/assets/sounds/sfx_shieldUp.ogg', 'win');
-			createjs.Sound.registerSound('src/assets/Bonus/cardPlace1.ogg', 'card');
-			createjs.Sound.registerSound('src/assets/Bonus/chipsCollide1.ogg', 'chip');
-      		if (localStorage.getItem('BlackJackJs-userName')) {
-				player.account_key = localStorage.getItem('BlackJackJs-key');
-		  		record_state.account = new Account({ privateKey: player.account_key });
-				player.name.value = localStorage.getItem('BlackJackJs-userName');
-				player.funds = localStorage.getItem('BlackJackJs-funds');
-				player.chips = JSON.parse(localStorage.getItem('BlackJackJs-chips'));
-				this.start();
-			}
-			else{
-				this.startContainer = new createjs.Container();
-				var titleText = new createjs.Text('BlackJackJs', '60px Arial', '#fff');
-				titleText.center(1, 1);
-				var nameInput = new TextInput();
-				// autofocus
-				nameInput._focused = true;
-				nameInput._hiddenInput.style.display = 'block';
-				nameInput._hiddenInput.style.left = (nameInput.x + stage.canvas.offsetLeft + nameInput._padding) + 'px';
-				nameInput._hiddenInput.style.top = (nameInput.y + stage.canvas.offsetTop + nameInput._padding) + 'px';
-				nameInput._hiddenInput.focus();
-				nameInput.x = 430;
-				nameInput.y = 400;
-				nameInput._visiblePostCursorText.text = 'Your Account';
-				var submitText = new createjs.Text('OK', '30px Arial', '#fff');
-				submitText.x = 640;
-				submitText.y = 405;
-				submitText.cursor = 'Pointer';
-				var hit = new createjs.Shape();
-				hit.graphics.beginFill('#000').drawRect(0, 0, submitText.getMeasuredWidth(), submitText.getMeasuredHeight());
-				submitText.hitArea = hit;
-				submitText.addEventListener('click', function(){
-					player.name.value = nameInput._visiblePreCursorText.text || 'Player 1';
-          player.account_key = nameInput._visibleText || '';
-          record_state.account = new Account({ privateKey: player.account_key });
-          localStorage.setItem('BlackJackJs-userName', player.name.value);
-          localStorage.setItem('BlackJackJs-key', player.account_key);
+		  startScreen: function () {
+			  stage.enableMouseOver(10);
+			  createjs.Ticker.addEventListener('tick', tick);
+			  createjs.Ticker.setFPS(60);
+			  createjs.Sound.registerSound('src/assets/sounds/sfx_lose.ogg', 'lose');
+			  createjs.Sound.registerSound('src/assets/sounds/sfx_shieldUp.ogg', 'win');
+			  createjs.Sound.registerSound('src/assets/Bonus/cardPlace1.ogg', 'card');
+			  createjs.Sound.registerSound('src/assets/Bonus/chipsCollide1.ogg', 'chip');
+			  if (localStorage.getItem('BlackJackJs-userName')) {
+				  player.account_key = localStorage.getItem('BlackJackJs-key');
+				  record_state.account = new Account({ privateKey: player.account_key });
+				  player.name.value = localStorage.getItem('BlackJackJs-userName');
+				  player.funds = localStorage.getItem('BlackJackJs-funds');
+				  player.chips = JSON.parse(localStorage.getItem('BlackJackJs-chips'));
+				  this.start();
+			  }
+			  else {
+				  this.startContainer = new createjs.Container();
+				  var titleText = new createjs.Text('BlackJackJs', '60px Arial', '#fff');
+				  titleText.center(1, 1);
+				  var nameInput = new TextInput();
+				  // autofocus
+				  nameInput._focused = true;
+				  nameInput._hiddenInput.style.display = 'block';
+				  nameInput._hiddenInput.style.left = (nameInput.x + stage.canvas.offsetLeft + nameInput._padding) + 'px';
+				  nameInput._hiddenInput.style.top = (nameInput.y + stage.canvas.offsetTop + nameInput._padding) + 'px';
+				  nameInput._hiddenInput.focus();
+				  nameInput.x = 430;
+				  nameInput.y = 400;
+				  nameInput._visiblePostCursorText.text = 'Your Account';
+				  var submitText = new createjs.Text('OK', '30px Arial', '#fff');
+				  submitText.x = 640;
+				  submitText.y = 405;
+				  submitText.cursor = 'Pointer';
+				  var hit = new createjs.Shape();
+				  hit.graphics.beginFill('#000').drawRect(0, 0, submitText.getMeasuredWidth(), submitText.getMeasuredHeight());
+				  submitText.hitArea = hit;
+				  submitText.addEventListener('click', function () {
+					  player.name.value = nameInput._visiblePreCursorText.text || 'Player 1';
+					  player.account_key = nameInput._visibleText || '';
+					  record_state.account = new Account({ privateKey: player.account_key });
+					  localStorage.setItem('BlackJackJs-userName', player.name.value);
+					  localStorage.setItem('BlackJackJs-key', player.account_key);
 
-					localStorage.setItem('BlackJackJs-funds', '1000');
-          localStorage.setItem('BlackJackJs-chips', JSON.stringify(player.chips));
-         // game.game_init();
-					game.start();
-				});
-				this.startContainer.addChild(titleText, nameInput, submitText);
-				stage.addChild(this.startContainer);
-			}
-		},
+					  localStorage.setItem('BlackJackJs-funds', '1000');
+					  localStorage.setItem('BlackJackJs-chips', JSON.stringify(player.chips));
+					  // game.game_init();
+					  game.start();
+				  });
+				  this.startContainer.addChild(titleText, nameInput, submitText);
+				  stage.addChild(this.startContainer);
+			  }
+		  },
 
   
 
-		start: function () {
-			const player_name = player.name.value;
-			player.name.text = new createjs.Text(player_name, '30px Arial', '#fff');
-			player.name.text.center();
-			player.name.text.y = 600;
-			stage.addChild(player.name.text);
-			if(this.startContainer)
-			this.startContainer.removeAllChildren();
-			this.message.init();
-		//	player.fundsText.init();
-		//	this.buildDeck();
-			this.addButtons();
-			//this.addChips();
-		},
+		  start: function () {
+			  const player_name = player.name.value;
+			  player.name.text = new createjs.Text(player_name, '30px Arial', '#fff');
+			  player.name.text.center();
+			  player.name.text.y = 600;
+			  stage.addChild(player.name.text);
+			  if (this.startContainer)
+				this.startContainer.removeAllChildren();
+			  this.message.init();
+			  //	player.fundsText.init();
+			  //	this.buildDeck();
+			  this.addButtons();
+			  //this.addChips();
+		  },
 		
 
-		go: function () {
-			if(player.dealt && !this.inProgress){
-				game.inProgress = true;
-				player.betted = true;
-        this.message.text.text = '';
-        //todo 
-        mask.show(`./target/release/snarkos developer execute --private-key ${player.account_key} --broadcast "http://127.0.0.1:3030/testnet3/transaction/broadcast" --query "http://127.0.0.1:3030"  zkgaming_blackjack1.aleo request_start`);
-        mask.mask_init();
-      	//game.init_test();
-       record_state.game_init();
-			//	this.new();
-			}
-			else if(!player.dealt)
-				game._alert(messages.warning.bet);
-		},
+		  go: function () {
+			  if (player.dealt && !this.inProgress) {
+				  game.inProgress = true;
+				  player.betted = true;
+				  this.message.text.text = '';
+				  //todo 
+				  mask.show(`./target/release/snarkos developer execute --private-key ${player.account_key} --broadcast "http://127.0.0.1:3030/testnet3/transaction/broadcast" --query "http://127.0.0.1:3030"  zkgaming_blackjack1.aleo request_start`);
+				  mask.mask_init();
+				  record_state.game_init();
+			  }
+			  else if (!player.dealt)
+				  game._alert(messages.warning.bet);
+		  },
 
-		init_test() { 
-			const catd_value = [];
-			const player_first = {
-				mainer: 'player',
-				hidden: false,
-				value: 2,
-			};
-			for (let i = 0; i < 4; i++) { 
-				catd_value.push({
-						  mainer: i < 2 ? 'player':'bank',
-						  hidden:i === 2,
-                        value:i*3 + 1,
+		//   stand_test() {
+		// 	  const outputs =[
+		// 		{
+		// 			"type": "public",
+		// 			"id": "5249286986330358071933528436165458608601628145137060698637977125911621899048field",
+		// 			"value": "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px"
+		// 		},
+		// 		{
+		// 			"type": "public",
+		// 			"id": "5878944275294492537112304146515818798595698766335785721974572781047519863939field",
+		// 			"value": "67915324440375155815971772689629909761u128"
+		// 		},
+		// 		{
+		// 			"type": "public",
+		// 			"id": "2640077906399257265155023005902261965007333700966802000299014909981012529511field",
+		// 			"value": "16262385143592631044u64"
+		// 		},
+		// 		{
+		// 			"type": "public",
+		// 			"id": "7057815883212861856057055560644245377677404806708977636103338640747511033386field",
+		// 			"value": "4u8"
+		// 		}
+		// 	  ]
+		// 	   const obj = {
+		// 				  winner: outputs[0].value,
+		// 					gameId:outputs[2].value,
+		// 				  cards: outputs[1]?.value?.replace('u128',''),
+		// 				  next: outputs[3].value,
+							
+		// 			  }
+		// 			const deck_list = decode(obj.cards);
+		// 			const next = obj.next.replace('u8', '');
+		// 			console.log('---44deck_list', deck_list,next)
+		// 			player.stand_card(deck_list, obj.winner, Number(next));
+		//    },
+
+		// init_test() { 
+		// 	const catd_value = [];
+		// 	const player_first = {
+		// 		mainer: 'player',
+		// 		hidden: false,
+		// 		value: 2,
+		// 	};
+		// 	for (let i = 0; i < 4; i++) { 
+		// 		catd_value.push({
+		// 				  mainer: i < 2 ? 'player':'bank',
+		// 				  hidden:i === 2,
+        //                 value:i*3 + 1,
                       
-				})
-			}
-			  game.new(player_first,catd_value)
-		},
+		// 		})
+		// 	}
+		// 	  game.new(player_first,catd_value)
+		// },
 
 		end: function(){
 			game.dealtChipContainer?.removeAllChildren();
@@ -279,9 +308,9 @@ function App() {
 			bank.blackjack = false;
 			bank.deck = [];
 			player.dealt = 2;
-			player.chips = game.balanceChips(player.funds);
-			game.resetChips();
-			game.addChips();
+			//player.chips = game.balanceChips(1000);
+			//game.resetChips();
+			//game.addChips();
 			player.store();
 			bank.cardsContainer.removeAllChildren();
 			player.cardsContainer.removeAllChildren();
@@ -330,7 +359,6 @@ function App() {
 					for(let v of ['J', 'Q', 'K', 'A'])
 						this.deck.push(new Card(suit, v));
 				}
-			console.log('====344',this.deck,suits)
 		},
 
 		deckValue: function(deck){
@@ -353,12 +381,11 @@ function App() {
 				value_unit:undefined
 			}
 			var card = {
-				value: number?.value,
-				suit: suits_num(number?.value_unit),
+				value: number?.value?.toString(),
+				suit: suits_num(number?.value_unit?.toString()),
 				hidden: false
 			};
-
-			
+			console.log('=card==number3',canumberrd)
 			if(hidden) card.hidden = true;
 
 			if(to === 'bank')
@@ -538,7 +565,8 @@ function App() {
 			var total = game.deckValue(this.deck);
 			if (total < 17) {
 				// 依次给牌
-				const item_card_value = cardList[nextIndex]
+				const item_card_value = cardList[nextIndex];
+					console.log('====45', item_card_value,item_card_value.toString());
 				game.distributeCard('bank',undefined,item_card_value.toString());
 				if(game.deckValue(this.deck) < 17)
 					setTimeout(() => bank.play(
@@ -672,29 +700,30 @@ function App() {
 
 		win: function(){
 			game.message.text.text = messages.win;
-			setTimeout(function(){
-				createjs.Sound.play('win');
-				player.funds += player.blackjack ? player.dealt * 3 : player.dealt * 2;
-				game.end();
-				player.fundsText.update();
-			}, 2000);
+			// setTimeout(function(){
+			// 	createjs.Sound.play('win');
+			// 	player.funds += player.blackjack ? player.dealt * 3 : player.dealt * 2;
+			// 	game.end();
+			// 	player.fundsText.update();
+			// }, 2000);
 		},
 
 		lose: function(){
 			game.message.text.text = messages.lose;
-			if(this.doubled && this.deck.length === 3)
-				this.cardsContainer.children[2].image.src = imgs.cards.get(this.deck[2].suit, this.deck[2].value);
-			setTimeout(function(){
-				createjs.Sound.play('lose');
-				if(bank.blackjack && player.insurance){
-					player.funds += player.insurance * 2;
-					player.chips = game.balanceChips(player.funds);
-					player.fundsText.update();
-				}
-				if(player.funds <= 0)
-					return game.over();
-				game.end();
-			}, 2000);
+			// if(this.doubled && this.deck.length === 3)
+			// 	this.cardsContainer.children[2].image.src = imgs.cards.get(this.deck[2].suit, this.deck[2].value);
+			// setTimeout(function(){
+			// 	createjs.Sound.play('lose');
+			// 	if(bank.blackjack && player.insurance){
+			// 		player.funds += player.insurance * 2;
+			// 		player.chips = game.balanceChips(player.funds);
+			// 		player.fundsText.update();
+			// 	}
+			// 	if(player.funds <= 0)
+			// 		return game.over();
+				
+			// 	game.end();
+			// }, 2000);
 		},
 
 		draw: function(){
